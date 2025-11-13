@@ -2,14 +2,13 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, StyleSheet, View } from "react-native";
 import { Button, Text, TextInput, useTheme } from "react-native-paper";
 
-export default function AuthScreen() {  
+export default function AuthScreen() {
   const [isSingup, setIsSingup] = useState<boolean>(true);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string | null>("");
 
   const theme = useTheme();
-
   const handleSwitchMode = () => {
     setIsSingup((prev) => !prev);
   };
