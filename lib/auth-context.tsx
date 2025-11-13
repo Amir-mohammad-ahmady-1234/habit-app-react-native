@@ -7,6 +7,7 @@ type AuthContextType = {
   singUp: (email: string, password: string) => Promise<string | null>;
   singIn: (email: string, password: string) => Promise<string | null>;
   isUserLoading: boolean;
+  singOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,6 +37,15 @@ export default function AuthProvider({
     }
   };
 
+  const singOut = async () => {
+    try {
+      await account.deleteSession("current");
+      setUser(null);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   const singUp = async (email: string, password: string) => {
     try {
       await account.create(ID.unique(), email, password);
@@ -53,6 +63,8 @@ export default function AuthProvider({
   const singIn = async (email: string, password: string) => {
     try {
       await account.createEmailPasswordSession(email, password);
+      const session = await account.get();
+      setUser(session);
       return null;
     } catch (error) {
       if (error instanceof Error) {
@@ -64,7 +76,9 @@ export default function AuthProvider({
   };
 
   return (
-    <AuthContext.Provider value={{ singUp, singIn, user, isUserLoading }}>
+    <AuthContext.Provider
+      value={{ singUp, singIn, user, isUserLoading, singOut }}
+    >
       {children}
     </AuthContext.Provider>
   );
