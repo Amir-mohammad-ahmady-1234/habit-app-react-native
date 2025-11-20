@@ -7,7 +7,7 @@ import {
   RealtimeResponse,
 } from "@/lib/appwrite";
 import { useAuth } from "@/lib/auth-context";
-import { Habit } from "@/types/database.type";
+import { CompletedHabit, Habit } from "@/types/database.type";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
@@ -19,6 +19,7 @@ export default function Index() {
   const { singOut, user } = useAuth();
 
   const [habits, setHabits] = useState<Habit[]>();
+  const [completedHabits, setCompletedHabits] = useState<string[]>();
 
   const swipeableRefs = useRef<{ [key: string]: Swipeable | null }>({});
 
@@ -53,6 +54,7 @@ export default function Index() {
       );
 
       fetchHabits();
+      fetchTodayCompletions();
 
       return () => {
         habitSubscription();
@@ -73,6 +75,25 @@ export default function Index() {
     }
   };
 
+  const fetchTodayCompletions = async function () {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    try {
+      const response = await databases.listDocuments(
+        DATABASE_ID,
+        COMPLETIONS_COLLECTION,
+        [
+          Query.equal("user_id", user?.$id ?? ""),
+          Query.greaterThanEqual("completed_at", today.toISOString()),
+        ]
+      );
+      const complitions = response.documents as unknown as CompletedHabit[];
+      setCompletedHabits(complitions.map((c) => c.habit_id));
+    } catch (error) {
+      console.log(error); 
+    }
+  };
+
   const handleDeleteHabit = async (id: string) => {
     try {
       await databases.deleteDocument(DATABASE_ID, HABIT_COLLECTION_ID, id);
@@ -82,7 +103,7 @@ export default function Index() {
   };
 
   const handleCompleteHabit = async (id: string) => {
-    if (!user) return;
+    if (!user || completedHabits?.includes(id)) return;
 
     const currentData = new Date().toISOString();
 
