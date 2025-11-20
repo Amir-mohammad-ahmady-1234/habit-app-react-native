@@ -1,5 +1,6 @@
 import {
   client,
+  COMPLETIONS_COLLECTION,
   DATABASE_ID,
   databases,
   HABIT_COLLECTION_ID,
@@ -10,7 +11,7 @@ import { Habit } from "@/types/database.type";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
-import { Query } from "react-native-appwrite";
+import { ID, Query } from "react-native-appwrite";
 import { Swipeable } from "react-native-gesture-handler";
 import { Button, Surface, Text } from "react-native-paper";
 
@@ -80,6 +81,35 @@ export default function Index() {
     }
   };
 
+  const handleCompleteHabit = async (id: string) => {
+    if (!user) return;
+
+    const currentData = new Date().toISOString();
+
+    try {
+      await databases.createDocument(
+        DATABASE_ID,
+        COMPLETIONS_COLLECTION,
+        ID.unique(),
+        {
+          habit_id: id,
+          user_id: user.$id,
+          completed_at: currentData,
+        }
+      );
+
+      const habit = habits?.find((h) => h.$id === id);
+      if (!habit) return;
+
+      await databases.updateDocument(DATABASE_ID, HABIT_COLLECTION_ID, id, {
+        streak_count: habit.streak_count + 1,
+        last_completed: currentData,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   const renderRightActions = () => (
     <View style={styles.swipeActionRight}>
       <MaterialCommunityIcons
@@ -133,6 +163,8 @@ export default function Index() {
               onSwipeableOpen={(direction) => {
                 if (direction === "left") {
                   handleDeleteHabit(habits.$id);
+                } else if (direction === "right") {
+                  handleCompleteHabit(habits.$id);
                 }
 
                 swipeableRefs.current[habits.$id]?.close();
