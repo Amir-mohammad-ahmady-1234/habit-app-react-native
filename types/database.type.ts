@@ -17,3 +17,4 @@ export interface CompletedHabit {
   user_id: string;
   completed_at: string;
 }
+                                                                                                 

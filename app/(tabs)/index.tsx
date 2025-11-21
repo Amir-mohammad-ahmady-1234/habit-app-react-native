@@ -25,9 +25,9 @@ export default function Index() {
 
   useEffect(() => {
     if (user) {
-      const chanel = `databases.${DATABASE_ID}.collections.${HABIT_COLLECTION_ID}.documents`;
+      const habitChanel = `databases.${DATABASE_ID}.collections.${HABIT_COLLECTION_ID}.documents`;
       const habitSubscription = client.subscribe(
-        chanel,
+        habitChanel,
         (response: RealtimeResponse) => {
           if (
             response.events.includes(
@@ -53,11 +53,26 @@ export default function Index() {
         }
       );
 
+      const completionChanel = `databases.${DATABASE_ID}.collections.${COMPLETIONS_COLLECTION}.documents`;
+      const completionSubscription = client.subscribe(
+        completionChanel,
+        (response: RealtimeResponse) => {
+          if (
+            response.events.includes(
+              "databases.*.collections.*.documents.*.create"
+            )
+          ) {
+            fetchHabits();
+          }
+        }
+      );
+
       fetchHabits();
       fetchTodayCompletions();
 
       return () => {
         habitSubscription();
+        completionSubscription();
       };
     }
   }, [user]);
@@ -76,9 +91,9 @@ export default function Index() {
   };
 
   const fetchTodayCompletions = async function () {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
       const response = await databases.listDocuments(
         DATABASE_ID,
         COMPLETIONS_COLLECTION,
@@ -90,7 +105,7 @@ export default function Index() {
       const complitions = response.documents as unknown as CompletedHabit[];
       setCompletedHabits(complitions.map((c) => c.habit_id));
     } catch (error) {
-      console.log(error); 
+      console.log(error);
     }
   };
 
@@ -131,13 +146,20 @@ export default function Index() {
     }
   };
 
-  const renderRightActions = () => (
+  const isCompletedHabit = (habitId: string) =>
+    completedHabits?.includes(habitId);
+
+  const renderRightActions = (habitID: string) => (
     <View style={styles.swipeActionRight}>
-      <MaterialCommunityIcons
-        name="check-circle-outline"
-        size={32}
-        color={"#fff"}
-      />
+      {isCompletedHabit(habitID) ? (
+        <Text style={{ color: "#fff" }}>completed!</Text>
+      ) : (
+        <MaterialCommunityIcons
+          name="check-circle-outline"
+          size={32}
+          color={"#fff"}
+        />
+      )}
     </View>
   );
 
@@ -180,7 +202,7 @@ export default function Index() {
               overshootLeft={false}
               overshootRight={false}
               renderLeftActions={renderLeftActions}
-              renderRightActions={renderRightActions}
+              renderRightActions={() => renderRightActions(habits.$id)}
               onSwipeableOpen={(direction) => {
                 if (direction === "left") {
                   handleDeleteHabit(habits.$id);
@@ -191,7 +213,13 @@ export default function Index() {
                 swipeableRefs.current[habits.$id]?.close();
               }}
             >
-              <Surface style={styles.card} elevation={0}>
+              <Surface
+                style={[
+                  styles.card,
+                  isCompletedHabit(habits.$id) && styles.completed,
+                ]}
+                elevation={0}
+              >
                 <View style={styles.cardContent}>
                   <Text style={styles.cardTitle}> {habits.title}</Text>
                   <Text style={styles.cardDescription}>
@@ -251,6 +279,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.08,
     shadowRadius: 8,
     elevation: 4,
+  },
+  completed: {
+    opacity: 0.6,
   },
   cardContent: {
     padding: 20,
