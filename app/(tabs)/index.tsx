@@ -62,7 +62,7 @@ export default function Index() {
               "databases.*.collections.*.documents.*.create"
             )
           ) {
-            fetchHabits();
+            fetchTodayCompletions();
           }
         }
       );
